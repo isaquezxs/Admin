@@ -222,8 +222,8 @@ end
 local function DoJumpscare()
     -- Cria o som do susto
     local scream = Instance.new("Sound")
-    scream.SoundId = "rbxassetid://9120291260" -- som de grito
-    scream.Volume = 10
+    scream.SoundId = "rbxassetid://9098738774" -- som de grito
+    scream.Volume = 12
     scream.PlayOnRemove = true
     scream.Parent = workspace
 
@@ -235,7 +235,7 @@ local function DoJumpscare()
     local img = Instance.new("ImageLabel", gui)
     img.Size = UDim2.new(1, 0, 1, 0)
     img.BackgroundTransparency = 1
-    img.Image = "rbxassetid://12158476914" -- imagem assustadora
+    img.Image = "rbxassetid://108208669476219" -- imagem assustadora
     img.ImageTransparency = 1
     img.ZIndex = 999
 
