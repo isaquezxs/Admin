@@ -187,3 +187,91 @@ LocalPlayer.Chatted:Connect(function(msg)
 end)
 
 Notify("🧱 Sistema /jail carregado! Use: /jail NomeDoJogador")
+
+--[[ 😱 Shadow Jumpscare System | Brookhaven (local)
+Comando no chat: /jumpscare NomeDoJogador
+O jogador toma um susto (som + imagem) apenas se estiver com o script ativo
+Autor: isaquexz
+--]]
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+
+-- Notificação padrão
+local function Notify(text)
+    StarterGui:SetCore("SendNotification", {
+        Title = "Shadow Hub | Jumpscare System",
+        Text = text,
+        Duration = 4
+    })
+end
+
+-- Encontra jogador pelo nome ou parte
+local function FindPlayer(name)
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():match(name) or plr.DisplayName:lower():match(name) then
+            return plr
+        end
+    end
+end
+
+-- Função do jumpscare (susto visual + som)
+local function DoJumpscare()
+    -- Cria o som do susto
+    local scream = Instance.new("Sound")
+    scream.SoundId = "rbxassetid://9120291260" -- som de grito
+    scream.Volume = 10
+    scream.PlayOnRemove = true
+    scream.Parent = workspace
+
+    -- Cria imagem de susto na tela
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ShadowJumpscare"
+    gui.Parent = CoreGui
+
+    local img = Instance.new("ImageLabel", gui)
+    img.Size = UDim2.new(1, 0, 1, 0)
+    img.BackgroundTransparency = 1
+    img.Image = "rbxassetid://12158476914" -- imagem assustadora
+    img.ImageTransparency = 1
+    img.ZIndex = 999
+
+    -- Mostra a imagem rapidamente (fade in/out)
+    for i = 1, 10 do
+        img.ImageTransparency = img.ImageTransparency - 0.1
+        task.wait(0.05)
+    end
+
+    scream:Destroy() -- toca automaticamente ao remover
+
+    task.wait(0.4)
+
+    for i = 1, 10 do
+        img.ImageTransparency = img.ImageTransparency + 0.1
+        task.wait(0.05)
+    end
+
+    gui:Destroy()
+end
+
+-- Escuta comandos do chat
+LocalPlayer.Chatted:Connect(function(msg)
+    local cmd, targetName = msg:match("^/(%w+)%s+(.+)")
+    if cmd and cmd:lower() == "jumpscare" then
+        local target = FindPlayer(targetName)
+        if target then
+            -- se o nome alvo for o jogador local, leva o susto
+            if target == LocalPlayer then
+                DoJumpscare()
+            end
+            Notify("Jumpscare enviado para " .. target.Name)
+        else
+            Notify("Jogador não encontrado: " .. targetName)
+        end
+    end
+end)
+
+Notify("👻 Sistema /jumpscare carregado! Use: /jumpscare NomeDoJogador")
