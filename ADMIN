@@ -1,6 +1,6 @@
 --[[ 🔥 Shadow Kick System para Brookhaven (local)
 Comando no chat: /kick NomeDoJogador
-O jogador "some" apenas digite nome do jogador
+O jogador "some" apenas visualmente para você
 Autor: isaquexz
 --]]
 
@@ -50,7 +50,7 @@ local function VanishPlayer(target)
         end)
     end
 
-    Notify("Jogador " .. target.Name .. " foi expulso (kick).")
+    Notify("Jogador " .. target.Name .. " foi expulso (localmente).")
 end
 
 -- Ouve mensagens do chat
