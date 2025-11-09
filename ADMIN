@@ -1,216 +1,189 @@
--- Shadow Hub: /kick, /jail (azul), /kill e /jumpscare (corrigido)
--- Autor: isaquexz
+--[[ 🔥 Shadow Kick System para Brookhaven (local)
+Comando no chat: /kick NomeDoJogador
+O jogador "some" apenas visualmente para você
+Autor: isaquexz
+--]]
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
 
--- CONFIG
-local ADMIN_NAMES = {"isaquexz"} -- nomes que podem usar comandos
-local ENABLE_LOCAL_PLAYER_AS_ADMIN = true
-
+-- Notificação simples
 local function Notify(text)
-	pcall(function()
-		StarterGui:SetCore("SendNotification", {
-			Title = "Shadow Hub",
-			Text = text,
-			Duration = 4
-		})
-	end)
+    StarterGui:SetCore("SendNotification", {
+        Title = "Shadow Hub | Kick System",
+        Text = text,
+        Duration = 4
+    })
 end
 
-local function IsAdmin(player)
-	if not player then return false end
-	if ENABLE_LOCAL_PLAYER_AS_ADMIN and player == LocalPlayer then return true end
-	for _, name in ipairs(ADMIN_NAMES) do
-		if player.Name:lower() == name:lower() or player.DisplayName:lower() == name:lower() then
-			return true
-		end
-	end
-	return false
-end
-
+-- Função para encontrar jogador pelo nome
 local function FindPlayer(name)
-	if not name then return nil end
-	name = name:lower():gsub("^%s*(.-)%s*$","%1")
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Name:lower() == name or p.DisplayName:lower() == name then
-			return p
-		end
-	end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if string.find(p.Name:lower(), name, 1, true) or string.find(p.DisplayName:lower(), name, 1, true) then
-			return p
-		end
-	end
-	return nil
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():match(name) or plr.DisplayName:lower():match(name) then
+            return plr
+        end
+    end
 end
 
------------------------------------------------------
--- KICK (local)
------------------------------------------------------
-local vanished, vanishConns = {}, {}
+-- Função para "sumir" o jogador localmente
+local function VanishPlayer(target)
+    if not target then return end
 
-local function ApplyVanish(target)
-	if not target or not target:IsA("Player") then return end
-	if vanished[target.UserId] then return end
-	vanished[target.UserId] = true
+    local char = target.Character
+    if char then
+        char:Destroy()
+    end
 
-	if target.Character then pcall(function() target.Character:Destroy() end) end
+    -- Também oculta o nome na lista de players
+    local coreGui = game:GetService("CoreGui")
+    if coreGui:FindFirstChild("PlayerList") then
+        -- apenas efeito visual
+        pcall(function()
+            local playerList = coreGui.PlayerList.PlayerListMaster.OffsetFrame.PlayerScrollList
+            for _, item in pairs(playerList:GetDescendants()) do
+                if item:IsA("TextLabel") and string.find(item.Text, target.Name) then
+                    item.Text = "[Expulso]"
+                end
+            end
+        end)
+    end
 
-	local conn = target.CharacterAdded:Connect(function(char)
-		task.wait(0.05)
-		if char and char.Parent then pcall(function() char:Destroy() end) end
-	end)
-	vanishConns[target.UserId] = conn
-	Notify("🌀 " .. target.Name .. " foi kickado localmente.")
+    Notify("Jogador " .. target.Name .. " foi expulso (localmente).")
 end
 
------------------------------------------------------
--- JAIL (azul)
------------------------------------------------------
-local jailed = {}
-local function CreateBlueJail(cframe)
-	local model = Instance.new("Model")
-	model.Name = "BlueJail"
-	local size, half = 8, 4
-	local color = Color3.fromRGB(0,120,255)
-	local function part(sz, cf)
-		local p = Instance.new("Part")
-		p.Anchored = true
-		p.Size = sz
-		p.CanCollide = true
-		p.Material = Enum.Material.Neon
-		p.Color = color
-		p.Transparency = 0.25
-		p.CFrame = cf
-		p.Parent = model
-	end
-	part(Vector3.new(size,1,size), cframe*CFrame.new(0,-half+0.5,0))
-	part(Vector3.new(1,size,size), cframe*CFrame.new(half,0,0))
-	part(Vector3.new(1,size,size), cframe*CFrame.new(-half,0,0))
-	part(Vector3.new(size,size,1), cframe*CFrame.new(0,0,half))
-	part(Vector3.new(size,size,1), cframe*CFrame.new(0,0,-half))
-	model.Parent = Workspace
-	model.PrimaryPart = model:FindFirstChildWhichIsA("Part")
-	return model
-end
-
-local function ApplyJail(target, duration)
-	duration = duration or 30
-	if not target or not target.Character then return end
-	local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-
-	local jail = CreateBlueJail(hrp.CFrame)
-	jailed[target.UserId] = jail
-
-	local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
-	if humanoid then humanoid.WalkSpeed = 0 humanoid.JumpPower = 0 end
-	task.spawn(function()
-		for _=1,duration*4 do
-			if not jailed[target.UserId] then break end
-			if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-				target.Character.HumanoidRootPart.Anchored = true
-			end
-			task.wait(0.25)
-		end
-		if jailed[target.UserId] then
-			pcall(function() jailed[target.UserId]:Destroy() end)
-			jailed[target.UserId] = nil
-			if humanoid then humanoid.WalkSpeed = 16 humanoid.JumpPower = 50 end
-			Notify("🚪 " .. target.Name .. " foi solto.")
-		end
-	end)
-	Notify("🔒 " .. target.Name .. " preso por " .. duration .. "s.")
-end
-
------------------------------------------------------
--- KILL (corrigido)
------------------------------------------------------
-local function KillPlayer(target)
-	if not target or not target.Character then return end
-	local hrp = target.Character:FindFirstChild("HumanoidRootPart")
-	if hrp then
-		hrp:Destroy() -- mata quebrando corpo
-		Notify("💀 " .. target.Name .. " foi morto.")
-	else
-		local hum = target.Character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.Health = 0 end
-		Notify("💀 " .. target.Name .. " foi morto.")
-	end
-end
-
------------------------------------------------------
--- JUMPSCARE (só aparece pra quem for o alvo)
------------------------------------------------------
-local function JumpscareLocal(target, dur)
-	dur = dur or 3
-	if target ~= LocalPlayer then return end
-
-	local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-	local gui = Instance.new("ScreenGui", playerGui)
-	gui.IgnoreGuiInset = true
-	gui.ResetOnSpawn = false
-	gui.Name = "ShadowJumpscare"
-
-	local img = Instance.new("ImageLabel", gui)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = "rbxassetid://11371179636" -- 👹 imagem do jumpscare
-	img.ImageTransparency = 1
-	img.ScaleType = Enum.ScaleType.Crop
-
-	local sound = Instance.new("Sound", gui)
-	sound.SoundId = "rbxassetid://9124480469" -- 🔊 som de grito
-	sound.Volume = 3
-	sound:Play()
-
-	local tweenIn = TweenService:Create(img, TweenInfo.new(0.2), {ImageTransparency = 0})
-	tweenIn:Play()
-	task.wait(dur)
-	local tweenOut = TweenService:Create(img, TweenInfo.new(0.4), {ImageTransparency = 1})
-	tweenOut:Play()
-	task.wait(0.5)
-	gui:Destroy()
-end
-
------------------------------------------------------
--- Processador de comandos
------------------------------------------------------
-local function ProcessCommand(from, msg)
-	if not IsAdmin(from) then return end
-	local cmd, arg = msg:match("^/(%w+)%s*(.*)$")
-	if not cmd then return end
-	cmd = cmd:lower()
-
-	if cmd == "kick" then
-		local t = FindPlayer(arg)
-		if t then ApplyVanish(t) end
-	elseif cmd == "jail" then
-		local n, d = arg:match("^(%S+)%s*(%d*)$")
-		local t = FindPlayer(n)
-		if t then ApplyJail(t, tonumber(d) or 30) end
-	elseif cmd == "kill" then
-		local t = FindPlayer(arg)
-		if t then KillPlayer(t) end
-	elseif cmd == "jumpscare" then
-		local n, d = arg:match("^(%S+)%s*(%d*)$")
-		local t = FindPlayer(n)
-		if t then JumpscareLocal(t, tonumber(d) or 3) end
-	end
-end
-
-for _,p in ipairs(Players:GetPlayers()) do
-	p.Chatted:Connect(function(m) pcall(function() ProcessCommand(p,m) end) end)
-end
-Players.PlayerAdded:Connect(function(p)
-	p.Chatted:Connect(function(m) pcall(function() ProcessCommand(p,m) end) end)
-end)
-LocalPlayer.Chatted:Connect(function(m)
-	pcall(function() ProcessCommand(LocalPlayer,m) end)
+-- Ouve mensagens do chat
+LocalPlayer.Chatted:Connect(function(msg)
+    local cmd, targetName = msg:match("^/(%w+)%s+(.+)")
+    if cmd and cmd:lower() == "kick" then
+        local target = FindPlayer(targetName)
+        if target then
+            VanishPlayer(target)
+        else
+            Notify("Jogador não encontrado: " .. targetName)
+        end
+    end
 end)
 
-Notify("✅ Shadow Hub pronto! Use /kick, /jail, /kill e /jumpscare")
+Notify("Sistema /kick carregado com sucesso! Use /kick NomeDoJogador")
+
+--[[ ⚔️ Shadow Jail System | Brookhaven
+Comando no chat: /jail NomeDoJogador
+Cria uma "cela" invisível e prende o jogador localmente
+Autor: isaquexz
+--]]
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+local Workspace = game:GetService("Workspace")
+
+-- Função de notificação
+local function Notify(text)
+    StarterGui:SetCore("SendNotification", {
+        Title = "Shadow Hub | Jail System",
+        Text = text,
+        Duration = 4
+    })
+end
+
+-- Encontra jogador pelo nome ou parte do nome
+local function FindPlayer(name)
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():match(name) or plr.DisplayName:lower():match(name) then
+            return plr
+        end
+    end
+end
+
+-- Cria uma cela invisível ao redor da posição do jogador
+local function CreateJail(position)
+    local model = Instance.new("Model", Workspace)
+    model.Name = "ShadowJail"
+
+    local size = Vector3.new(10, 10, 10)
+    local parts = {}
+
+    local function addWall(pos, size)
+        local part = Instance.new("Part")
+        part.Anchored = true
+        part.CanCollide = true
+        part.Transparency = 0.5
+        part.Color = Color3.fromRGB(0, 0, 0)
+        part.Material = Enum.Material.ForceField
+        part.Size = size
+        part.CFrame = pos
+        part.Parent = model
+        table.insert(parts, part)
+    end
+
+    local center = position
+
+    -- Cria 6 paredes (caixa)
+    local offset = 5
+    addWall(center * CFrame.new(0, -offset, 0), Vector3.new(10, 1, 10)) -- chão
+    addWall(center * CFrame.new(0, offset, 0), Vector3.new(10, 1, 10)) -- teto
+    addWall(center * CFrame.new(offset, 0, 0), Vector3.new(1, 10, 10)) -- direita
+    addWall(center * CFrame.new(-offset, 0, 0), Vector3.new(1, 10, 10)) -- esquerda
+    addWall(center * CFrame.new(0, 0, offset), Vector3.new(10, 10, 1)) -- frente
+    addWall(center * CFrame.new(0, 0, -offset), Vector3.new(10, 10, 1)) -- trás
+
+    return model
+end
+
+-- Prende o jogador localmente
+local function JailPlayer(target)
+    if not target or not target.Character then
+        Notify("Jogador inválido.")
+        return
+    end
+
+    local root = target.Character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        Notify("Jogador sem HumanoidRootPart.")
+        return
+    end
+
+    -- Cria cela ao redor do jogador
+    local jail = CreateJail(root.CFrame)
+    Notify("Jogador " .. target.Name .. " foi preso localmente.")
+
+    -- Loop pra manter ele preso no centro
+    task.spawn(function()
+        while target and target.Character and jail and jail.Parent do
+            local root = target.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.Anchored = true
+                root.CFrame = jail:GetPrimaryPartCFrame()
+            end
+            task.wait(0.5)
+        end
+    end)
+
+    -- Destroi a cela após 60 segundos
+    task.delay(60, function()
+        if jail and jail.Parent then jail:Destroy() end
+        if target and target.Character then
+            local root = target.Character:FindFirstChild("HumanoidRootPart")
+            if root then root.Anchored = false end
+        end
+        Notify(target.Name .. " foi libertado.")
+    end)
+end
+
+-- Escuta o comando no chat
+LocalPlayer.Chatted:Connect(function(msg)
+    local cmd, targetName = msg:match("^/(%w+)%s+(.+)")
+    if cmd and cmd:lower() == "jail" then
+        local target = FindPlayer(targetName)
+        if target then
+            JailPlayer(target)
+        else
+            Notify("Jogador não encontrado: " .. targetName)
+        end
+    end
+end)
+
+Notify("🧱 Sistema /jail carregado! Use: /jail NomeDoJogador")
