@@ -67,3 +67,123 @@ LocalPlayer.Chatted:Connect(function(msg)
 end)
 
 Notify("Sistema /kick carregado com sucesso! Use /kick NomeDoJogador")
+
+--[[ ⚔️ Shadow Jail System | Brookhaven
+Comando no chat: /jail NomeDoJogador
+Cria uma "cela" invisível e prende o jogador localmente
+Autor: isaquexz
+--]]
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+local Workspace = game:GetService("Workspace")
+
+-- Função de notificação
+local function Notify(text)
+    StarterGui:SetCore("SendNotification", {
+        Title = "Shadow Hub | Jail System",
+        Text = text,
+        Duration = 4
+    })
+end
+
+-- Encontra jogador pelo nome ou parte do nome
+local function FindPlayer(name)
+    name = name:lower()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():match(name) or plr.DisplayName:lower():match(name) then
+            return plr
+        end
+    end
+end
+
+-- Cria uma cela invisível ao redor da posição do jogador
+local function CreateJail(position)
+    local model = Instance.new("Model", Workspace)
+    model.Name = "ShadowJail"
+
+    local size = Vector3.new(10, 10, 10)
+    local parts = {}
+
+    local function addWall(pos, size)
+        local part = Instance.new("Part")
+        part.Anchored = true
+        part.CanCollide = true
+        part.Transparency = 0.5
+        part.Color = Color3.fromRGB(0, 0, 0)
+        part.Material = Enum.Material.ForceField
+        part.Size = size
+        part.CFrame = pos
+        part.Parent = model
+        table.insert(parts, part)
+    end
+
+    local center = position
+
+    -- Cria 6 paredes (caixa)
+    local offset = 5
+    addWall(center * CFrame.new(0, -offset, 0), Vector3.new(10, 1, 10)) -- chão
+    addWall(center * CFrame.new(0, offset, 0), Vector3.new(10, 1, 10)) -- teto
+    addWall(center * CFrame.new(offset, 0, 0), Vector3.new(1, 10, 10)) -- direita
+    addWall(center * CFrame.new(-offset, 0, 0), Vector3.new(1, 10, 10)) -- esquerda
+    addWall(center * CFrame.new(0, 0, offset), Vector3.new(10, 10, 1)) -- frente
+    addWall(center * CFrame.new(0, 0, -offset), Vector3.new(10, 10, 1)) -- trás
+
+    return model
+end
+
+-- Prende o jogador localmente
+local function JailPlayer(target)
+    if not target or not target.Character then
+        Notify("Jogador inválido.")
+        return
+    end
+
+    local root = target.Character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        Notify("Jogador sem HumanoidRootPart.")
+        return
+    end
+
+    -- Cria cela ao redor do jogador
+    local jail = CreateJail(root.CFrame)
+    Notify("Jogador " .. target.Name .. " foi preso localmente.")
+
+    -- Loop pra manter ele preso no centro
+    task.spawn(function()
+        while target and target.Character and jail and jail.Parent do
+            local root = target.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.Anchored = true
+                root.CFrame = jail:GetPrimaryPartCFrame()
+            end
+            task.wait(0.5)
+        end
+    end)
+
+    -- Destroi a cela após 60 segundos
+    task.delay(60, function()
+        if jail and jail.Parent then jail:Destroy() end
+        if target and target.Character then
+            local root = target.Character:FindFirstChild("HumanoidRootPart")
+            if root then root.Anchored = false end
+        end
+        Notify(target.Name .. " foi libertado.")
+    end)
+end
+
+-- Escuta o comando no chat
+LocalPlayer.Chatted:Connect(function(msg)
+    local cmd, targetName = msg:match("^/(%w+)%s+(.+)")
+    if cmd and cmd:lower() == "jail" then
+        local target = FindPlayer(targetName)
+        if target then
+            JailPlayer(target)
+        else
+            Notify("Jogador não encontrado: " .. targetName)
+        end
+    end
+end)
+
+Notify("🧱 Sistema /jail carregado! Use: /jail NomeDoJogador")
