@@ -1,7 +1,6 @@
---[[ 🔥 Shadow Kick System para Brookhaven (local)
+--[[ ShadowScripts Kick System para Brookhaven (local)
 Comando no chat: /kick NomeDoJogador
-O jogador "some" apenas visualmente para você
-Autor: isaquexz
+Autor: Shadow
 --]]
 
 local Players = game:GetService("Players")
@@ -13,7 +12,7 @@ local function Notify(text)
     StarterGui:SetCore("SendNotification", {
         Title = "Shadow Hub | Kick System",
         Text = text,
-        Duration = 4
+        Duration = 2
     })
 end
 
@@ -27,7 +26,7 @@ local function FindPlayer(name)
     end
 end
 
--- Função para "sumir" o jogador localmente
+-- Função para "sumir" o jogador
 local function VanishPlayer(target)
     if not target then return end
 
@@ -68,7 +67,7 @@ end)
 
 Notify("Sistema /kick carregado com sucesso! Use /kick NomeDoJogador")
 
---[[ 🔷 Shadow Jail System | Brookhaven (local)
+--[[ Shadow Jail | Brookhaven
 Comando no chat: /jail NomeDoJogador
 Cria uma jaula azul em volta do jogador (efeito visual local)
 Autor: isaquexz
